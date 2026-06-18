@@ -219,19 +219,20 @@ ${emailContext}
 Answer the user's question based ONLY on the above emails. Cite sources explicitly.`
 
   // Build conversation for multi-turn context
+  // Gemini uses "model" role, not "assistant"
   const history = conversationHistory.slice(-6).map((msg) => ({
-    role: msg.role,
+    role: msg.role === "assistant" ? "model" : "user",
     parts: [{ text: msg.content }],
   }))
 
   const chat = flashModel.startChat({
-    systemInstruction: systemPrompt,
+    systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
     history:
       history.length > 1
         ? history.slice(0, -1).map((h) => ({
-            role: h.role,
-            parts: h.parts,
-          }))
+          role: h.role,
+          parts: h.parts,
+        }))
         : [],
   })
 

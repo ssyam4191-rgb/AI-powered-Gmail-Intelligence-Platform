@@ -94,6 +94,15 @@ export default function ChatPage() {
 
       const data = await res.json()
 
+      if (!res.ok) {
+        // Surface the actual error from the server if available
+        const errMsg = data?.error || `Server error (${res.status})`
+        console.error("Chat API error:", errMsg, data)
+        toast.error(errMsg)
+        setMessages((prev) => prev.slice(0, -1))
+        return
+      }
+
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -113,8 +122,9 @@ export default function ChatPage() {
         setActiveSession(data.sessionId)
         loadSessions()
       }
-    } catch {
-      toast.error("Failed to get response")
+    } catch (err) {
+      console.error("Chat fetch error:", err)
+      toast.error("Failed to get response — check the browser console for details")
       setMessages((prev) => prev.slice(0, -1))
     } finally {
       setLoading(false)

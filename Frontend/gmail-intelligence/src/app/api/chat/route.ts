@@ -22,53 +22,63 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminClient() as any
   const userId = session.userId
 
-  // Ensure session exists
-  let chatSessionId = sessionId
-  if (!chatSessionId) {
-    const { data: newSession } = await supabase
-      .from("chat_sessions")
-      .insert({
-        user_id: userId,
-        title: message.slice(0, 60),
-      })
-      .select()
-      .single()
-    chatSessionId = newSession?.id
+  try {
+    // Ensure session exists
+    let chatSessionId = sessionId
+    if (!chatSessionId) {
+      const { data: newSession } = await supabase
+        .from("chat_sessions")
+        .insert({
+          user_id: userId,
+          title: message.slice(0, 60),
+        })
+        .select()
+        .single()
+      chatSessionId = newSession?.id
+    }
+
+    // Save user message
+    await supabase.from("chat_messages").insert({
+      session_id: chatSessionId,
+      user_id: userId,
+      role: "user",
+      content: message,
+    })
+
+    // RAG: Retrieve relevant emails using hybrid search
+    const relevantEmails = await hybridSearchEmails(message, userId, 10)
+    console.log(`[chat] user=${userId} query="${message}" retrievedEmails=${relevantEmails.length}`)
+
+    // Generate AI response
+    const { answer, sources } = await chatWithAgent({
+      question: message,
+      conversationHistory: history,
+      relevantEmails,
+    })
+
+    // Save assistant message with sources
+    await supabase.from("chat_messages").insert({
+      session_id: chatSessionId,
+      user_id: userId,
+      role: "assistant",
+      content: answer,
+      sources: sources.length > 0 ? sources : null,
+    })
+
+    return NextResponse.json({
+      answer,
+      sources,
+      sessionId: chatSessionId,
+    })
+  } catch (err: any) {
+    console.error("[chat] POST error:", err)
+    return NextResponse.json(
+      { error: err?.message || "Internal server error" },
+      { status: 500 }
+    )
   }
-
-  // Save user message
-  await supabase.from("chat_messages").insert({
-    session_id: chatSessionId,
-    user_id: userId,
-    role: "user",
-    content: message,
-  })
-
-  // RAG: Retrieve relevant emails using hybrid search
-  const relevantEmails = await hybridSearchEmails(message, userId, 10)
-
-  // Generate AI response
-  const { answer, sources } = await chatWithAgent({
-    question: message,
-    conversationHistory: history,
-    relevantEmails,
-  })
-
-  // Save assistant message with sources
-  await supabase.from("chat_messages").insert({
-    session_id: chatSessionId,
-    user_id: userId,
-    role: "assistant",
-    content: answer,
-    sources: sources.length > 0 ? sources : null,
-  })
-
-  return NextResponse.json({
-    answer,
-    sources,
-    sessionId: chatSessionId,
-  })
 }
+
 
 // GET /api/chat — List chat sessions
 export async function GET(req: NextRequest) {
