@@ -7,22 +7,22 @@ Powered by **Next.js 16**, **Supabase (pgvector)**, **Google Gemini 2.5 Flash**,
 ---
 
 > [!IMPORTANT]
-> **Key Implementation & Testing Notes:**
-> 1. **Google OAuth is in Testing Phase**: Google Sign-In currently requires pre-registered testing user emails in the Google Cloud Console. Transitioning the OAuth screen to the "Production" status takes 3-5 days for Google's official review and approval. For convenience during evaluation, a **test Gmail account (email and password)** has been shared; please use these credentials to log in and explore the platform.
-> 2. **Token Optimization**: System prompts across all AI features are carefully optimized and kept brief to minimize input token usage, accommodating the limits of the Gemini API free tier.
-> 3. **Dual AI Engines with Auto-Fallback**: The platform integrates two AI endpoints—**Google Gemini 2.5 Flash** (Primary Engine) and **NVIDIA NIM Llama 3.1 8B** (Secondary Engine). If a primary Gemini request fails (due to rate limits, API quotas, or network issues), the app automatically falls back to NVIDIA NIM to complete the request and keep the app functional.
+> **Important Testing & AI Notes:**
+> 1. **Google Login is in Testing Mode**: Right now, Google login only works with test email addresses added in our Google Developer Console. Moving the app to "Production" status takes 3 to 5 days because Google needs to verify and approve it. For testing, please use the test email and password shared with you to log in and explore the app.
+> 2. **Short Prompts for Free Tier**: We made the AI system prompts short and simple. This reduces the number of tokens used, so the app runs smoothly within the free tier limits of the Gemini API.
+> 3. **Dual AI Engines with Auto Backup**: The app uses two AI models: **Google Gemini 2.5 Flash** (Primary Engine) and **NVIDIA NIM Llama 3.1 8B** (Secondary Engine). If a Gemini request fails (due to rate limits, API quotas, or network issues), the app automatically switches to the NVIDIA model to get the response.
 
 ---
 
 ## 🚀 Key Features
 
-1. **Google OAuth 2.0 Login**: Secure authentication with Google to retrieve granular scopes (`gmail.readonly`, `gmail.send`, `gmail.modify`, `gmail.labels`).
-2. **Robust Sync Engine**: Dual sync modes (initial full sync up to 500 emails, followed by incremental updates using the Gmail History API). Handles rate limiting gracefully with exponential backoff.
-3. **Automated AI Categorization (NVIDIA NIM)**: Uses low-latency Llama 3.1 8B Instruct model to classify incoming emails into specific folders (*Finance, Job/Recruitment, Newsletters, Notifications, Personal, Work/Professional*).
-4. **Thread-Level AI Summarization (Gemini 2.5 Flash)**: Generates high-quality per-email and multi-message thread summaries, highlighting action items and core decisions.
-5. **Conversational RAG Agent (Gemini + pgvector)**: An AI assistant that answers questions about your emails using hybrid semantic and keyword search. Answers are fully grounded in your inbox and attribute source citations.
-6. **Smart Compose & Contextual Reply**: Draft professional emails using natural language prompts or reply to threads preserving full mail headers (`In-Reply-To` and `References`) to keep threads organized.
-7. **Premium Dark UI**: Built with a sleek dark-themed dashboard using glassmorphism, responsive sidebar navigation, loading skeletons, and interactive state indicators.
+1. **Secure Google Login**: Log in safely with your Google account to read, manage, and send emails.
+2. **Smart Email Sync**: Syncs your emails in two ways: first, it fetches up to 500 emails, and then it updates only new emails using Google's History API. It handles rate limits by retrying with a delay if Google is busy.
+3. **Auto Email Folders (NVIDIA NIM)**: Automatically groups emails into folders like *Finance, Job/Recruitment, Newsletters, Notifications, Personal,* or *Work* using a fast Llama 3.1 AI model.
+4. **Email Summaries (Gemini 2.5 Flash)**: Generates quick 2-3 sentence summaries of single emails or entire email threads, listing key decisions and tasks.
+5. **AI Email Chatbot (RAG)**: A smart chat assistant that answers questions about your emails. It finds the right emails using smart search and always lists which email the answer came from.
+6. **Smart Compose & Reply**: Write new emails or replies easily using simple text prompts. It automatically keeps replies in the same email thread.
+7. **Modern Dark UI**: A beautiful dark dashboard with smooth loading animations, a clean sidebar, and an easy-to-use layout.
 
 ---
 
