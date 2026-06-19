@@ -9,8 +9,10 @@ Powered by **Next.js 16**, **Supabase (pgvector)**, **Google Gemini 2.5 Flash**,
 > [!IMPORTANT]
 > **Important Testing & AI Notes:**
 > 1. **Google Login is in Testing Mode**: Right now, Google login only works with test email addresses added in our Google Developer Console. Moving the app to "Production" status takes 3 to 5 days because Google needs to verify and approve it. For testing, please use the test email and password shared with you to log in and explore the app.
-> 2. **Short Prompts for Free Tier**: We made the AI system prompts short and simple. This reduces the number of tokens used, so the app runs smoothly within the free tier limits of the Gemini API.
-> 3. **Dual AI Engines with Auto Backup**: The app uses two AI models: **Google Gemini 2.5 Flash** (Primary Engine) and **NVIDIA NIM Llama 3.1 8B** (Secondary Engine). If a Gemini request fails (due to rate limits, API quotas, or network issues), the app automatically switches to the NVIDIA model to get the response.
+>    Email    : ssyam4191@gmail.com
+>    password : Syam@12345
+> 3. **Short Prompts for Free Tier**: We made the AI system prompts short and simple. This reduces the number of tokens used, so the app runs smoothly within the free tier limits of the Gemini API.
+> 4. **Dual AI Engines with Auto Backup**: The app uses two AI models: **Google Gemini 2.5 Flash** (Primary Engine) and **NVIDIA NIM Llama 3.1 8B** (Secondary Engine). If a Gemini request fails (due to rate limits, API quotas, or network issues), the app automatically switches to the NVIDIA model to get the response.
 
 ---
 
