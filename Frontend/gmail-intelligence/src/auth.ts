@@ -22,6 +22,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           prompt: "consent",
         },
       },
+      // Disable PKCE — fixes "pkceCodeVerifier could not be parsed" in
+      // serverless / edge environments where cookies may not persist
+      // between the OAuth redirect and callback invocations.
+      checks: ["state"],
     }),
   ],
   callbacks: {

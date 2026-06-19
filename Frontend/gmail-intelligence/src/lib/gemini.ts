@@ -4,6 +4,7 @@
  */
 import { GoogleGenerativeAI, TaskType } from "@google/generative-ai"
 import type { EmailCategory } from "@/types/database"
+import { nimCompletion } from "./nvidia"
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -50,8 +51,13 @@ ${email.body.slice(0, 4000)}
 
 Summary:`
 
-  const result = await flashModel.generateContent(prompt)
-  return result.response.text().trim()
+  try {
+    const result = await flashModel.generateContent(prompt)
+    return result.response.text().trim()
+  } catch (error) {
+    console.warn("Gemini summarizeEmail failed, falling back to NVIDIA NIM:", error)
+    return nimCompletion([{ role: "user", content: prompt }], 200, 0.3)
+  }
 }
 
 export async function summarizeThread(messages: Array<{
@@ -81,8 +87,13 @@ ${messagesText.slice(0, 12000)}
 
 Thread Summary:`
 
-  const result = await flashModel.generateContent(prompt)
-  return result.response.text().trim()
+  try {
+    const result = await flashModel.generateContent(prompt)
+    return result.response.text().trim()
+  } catch (error) {
+    console.warn("Gemini summarizeThread failed, falling back to NVIDIA NIM:", error)
+    return nimCompletion([{ role: "user", content: prompt }], 400, 0.3)
+  }
 }
 
 // ============================================================
@@ -104,11 +115,20 @@ Return ONLY valid JSON in this exact format (no markdown, no extra text):
 If the user doesn't specify a recipient, use "recipient@example.com" as a placeholder.
 Write in a professional, clear tone. Include proper greeting and sign-off.`
 
-  const result = await flashModel.generateContent(
-    systemPrompt + "\n\nUser prompt: " + prompt
-  )
+  let text: string
+  try {
+    const result = await flashModel.generateContent(
+      systemPrompt + "\n\nUser prompt: " + prompt
+    )
+    text = result.response.text().trim()
+  } catch (error) {
+    console.warn("Gemini composeEmail failed, falling back to NVIDIA NIM:", error)
+    text = await nimCompletion([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `User prompt: ${prompt}` }
+    ], 600, 0.7)
+  }
 
-  const text = result.response.text().trim()
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error("Failed to parse compose response")
 
@@ -145,8 +165,13 @@ RECIPIENT: ${params.recipientEmail}
 
 Write ONLY the reply body text (no subject line, no metadata). Be professional, context-aware, and address the specific points mentioned.`
 
-  const result = await flashModel.generateContent(prompt)
-  return result.response.text().trim()
+  try {
+    const result = await flashModel.generateContent(prompt)
+    return result.response.text().trim()
+  } catch (error) {
+    console.warn("Gemini generateReply failed, falling back to NVIDIA NIM:", error)
+    return nimCompletion([{ role: "user", content: prompt }], 800, 0.5)
+  }
 }
 
 // ============================================================
@@ -218,26 +243,40 @@ ${emailContext}
 
 Answer the user's question based ONLY on the above emails. Cite sources explicitly.`
 
-  // Build conversation for multi-turn context
-  // Gemini uses "model" role, not "assistant"
-  const history = conversationHistory.slice(-6).map((msg) => ({
-    role: msg.role === "assistant" ? "model" : "user",
-    parts: [{ text: msg.content }],
-  }))
+  let answer: string
+  try {
+    // Build conversation for multi-turn context
+    // Gemini uses "model" role, not "assistant"
+    const history = conversationHistory.slice(-6).map((msg) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }],
+    }))
 
-  const chat = flashModel.startChat({
-    systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
-    history:
-      history.length > 1
-        ? history.slice(0, -1).map((h) => ({
-          role: h.role,
-          parts: h.parts,
-        }))
-        : [],
-  })
+    const chat = flashModel.startChat({
+      systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
+      history:
+        history.length > 1
+          ? history.slice(0, -1).map((h) => ({
+            role: h.role,
+            parts: h.parts,
+          }))
+          : [],
+    })
 
-  const result = await chat.sendMessage(question)
-  const answer = result.response.text().trim()
+    const result = await chat.sendMessage(question)
+    answer = result.response.text().trim()
+  } catch (error) {
+    console.warn("Gemini chatWithAgent failed, falling back to NVIDIA NIM:", error)
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...conversationHistory.slice(-6).map((msg) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content,
+      })),
+      { role: "user", content: question },
+    ]
+    answer = await nimCompletion(messages, 800, 0.7)
+  }
 
   // Extract sources (emails actually referenced in the answer)
   const sources: ChatSource[] = relevantEmails
@@ -279,8 +318,15 @@ ${newsletterBody.slice(0, 5000)}
 
 JSON array of news items:`
 
-  const result = await flashModel.generateContent(prompt)
-  const text = result.response.text().trim()
+  let text: string
+  try {
+    const result = await flashModel.generateContent(prompt)
+    text = result.response.text().trim()
+  } catch (error) {
+    console.warn("Gemini extractNewsItems failed, falling back to NVIDIA NIM:", error)
+    text = await nimCompletion([{ role: "user", content: prompt }], 1000, 0.2)
+  }
+
   const jsonMatch = text.match(/\[[\s\S]*\]/)
   if (!jsonMatch) return []
 

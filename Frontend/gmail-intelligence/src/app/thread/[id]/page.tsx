@@ -3,9 +3,9 @@
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import {
-  ArrowLeft, Reply, User, Clock, Tag, Loader2, Brain
+  ArrowLeft, Reply, Clock, Loader2, Brain
 } from "lucide-react"
-import { formatDistanceToNow, format } from "date-fns"
+import { format } from "date-fns"
 import { toast } from "sonner"
 import CategoryBadge from "@/components/CategoryBadge"
 import ReplyModal from "@/components/ReplyModal"
@@ -66,6 +66,11 @@ export default function ThreadPage({
       })
       .catch(() => toast.error("Failed to load thread"))
       .finally(() => setLoading(false))
+
+    // Mark all emails in this thread as read
+    fetch(`/api/threads/${id}`, { method: "PATCH" }).catch(() => {
+      // silently ignore — non-critical
+    })
   }, [id])
 
   const toggleExpand = (msgId: string) => {
@@ -87,41 +92,45 @@ export default function ThreadPage({
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      {/* Header */}
-      <div className="sticky top-0 z-10 glass border-b border-white/5 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 glass border-b border-white/5 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold text-white truncate">
+            <h1 className="text-base sm:text-lg font-semibold text-white truncate">
               {thread?.subject || "(No Subject)"}
             </h1>
-            <div className="flex items-center gap-3 text-sm text-gray-500">
+            <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm text-gray-500">
               <span>{thread?.message_count} messages</span>
               <span>·</span>
               <span>{thread?.participants?.length} participants</span>
-              {thread && <CategoryBadge category={thread.category} />}
+              {thread && (
+                <span className="hidden sm:block">
+                  <CategoryBadge category={thread.category} />
+                </span>
+              )}
             </div>
           </div>
           <button
             id="reply-btn"
             onClick={() => setReplyOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors shrink-0"
           >
             <Reply className="w-4 h-4" />
-            Reply
+            <span className="hidden sm:inline">Reply</span>
           </button>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-3 sm:space-y-4">
         {/* Thread AI Summary */}
         {thread?.summary && (
-          <div className="glass rounded-xl p-4 border border-indigo-500/20">
+          <div className="glass rounded-xl p-3 sm:p-4 border border-indigo-500/20">
             <div className="flex items-center gap-2 mb-2">
               <Brain className="w-4 h-4 text-indigo-400" />
               <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">
@@ -135,7 +144,6 @@ export default function ThreadPage({
         {/* Messages */}
         {messages.map((msg, idx) => {
           const isExpanded = expandedMessages.has(msg.id)
-          const isLatest = idx === messages.length - 1
 
           return (
             <div
@@ -143,37 +151,52 @@ export default function ThreadPage({
               id={`msg-${msg.id}`}
               className="glass rounded-xl border border-white/5 overflow-hidden"
             >
-              {/* Message header */}
+              {/* Message header — always visible, click to expand */}
               <div
-                className="flex items-center gap-4 p-4 cursor-pointer hover:bg-white/5 transition-colors"
+                className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 cursor-pointer hover:bg-white/5 transition-colors"
                 onClick={() => toggleExpand(msg.id)}
               >
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
                   <span className="text-white text-sm font-semibold">
-                    {(msg.from_name || msg.from_email)[0].toUpperCase()}
+                    {(msg.from_name || msg.from_email || "?")[0].toUpperCase()}
                   </span>
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  {/* From row */}
+                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
                     <span className="font-semibold text-white text-sm">
-                      {msg.from_name || msg.from_email}
+                      From:&nbsp;
+                      {msg.from_name ? msg.from_name : (msg.from_email || "Unknown")}
                     </span>
-                    {!isExpanded && msg.summary && (
-                      <span className="text-xs text-indigo-400/70 truncate hidden sm:block">
-                        — {msg.summary}
+                    {msg.from_name && msg.from_email && (
+                      <span className="text-xs text-gray-400 hidden sm:inline">
+                        &lt;{msg.from_email}&gt;
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>To: {msg.to_emails.slice(0, 2).join(", ")}</span>
+                  {/* To row */}
+                  <div className="flex items-start gap-1 text-xs text-gray-400 mb-0.5">
+                    <span className="shrink-0 font-medium text-gray-500">To:</span>
+                    <span className="break-all">
+                      {Array.isArray(msg.to_emails) && msg.to_emails.length > 0
+                        ? msg.to_emails.join(", ")
+                        : (msg.to_emails as unknown as string) || "—"}
+                    </span>
                   </div>
+                  {/* Collapsed summary hint */}
+                  {!isExpanded && msg.summary && (
+                    <span className="text-xs text-indigo-400/70 truncate block mt-0.5">
+                      {msg.summary}
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <Clock className="w-3.5 h-3.5 text-gray-600" />
-                  <span className="text-xs text-gray-500">
+                {/* Time */}
+                <div className="flex items-center gap-1.5 shrink-0 text-xs text-gray-500">
+                  <Clock className="w-3.5 h-3.5 text-gray-600 hidden sm:block" />
+                  <span>
                     {msg.sent_at
                       ? format(new Date(msg.sent_at), "MMM d, h:mm a")
                       : ""}
@@ -183,25 +206,21 @@ export default function ThreadPage({
 
               {/* AI per-email summary */}
               {isExpanded && msg.summary && (
-                <div className="mx-4 mb-3 px-3 py-2 bg-indigo-950/40 rounded-lg border border-indigo-500/15">
+                <div className="mx-3 sm:mx-4 mb-3 px-3 py-2 bg-indigo-950/40 rounded-lg border border-indigo-500/15">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Brain className="w-3 h-3 text-indigo-400" />
-                    <span className="text-xs text-indigo-400 font-medium">
-                      AI Summary
-                    </span>
+                    <span className="text-xs text-indigo-400 font-medium">AI Summary</span>
                   </div>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    {msg.summary}
-                  </p>
+                  <p className="text-xs text-gray-400 leading-relaxed">{msg.summary}</p>
                 </div>
               )}
 
               {/* Message body */}
               {isExpanded && (
-                <div className="px-4 pb-4">
+                <div className="px-3 sm:px-4 pb-3 sm:pb-4">
                   <div className="prose prose-sm prose-invert max-w-none">
                     {msg.body_text ? (
-                      <pre className="whitespace-pre-wrap text-gray-300 text-sm font-sans leading-relaxed bg-gray-900/50 rounded-lg p-4">
+                      <pre className="whitespace-pre-wrap text-gray-300 text-sm font-sans leading-relaxed bg-gray-900/50 rounded-lg p-3 sm:p-4 overflow-x-auto">
                         {msg.body_text.slice(0, 5000)}
                         {msg.body_text.length > 5000 && (
                           <span className="text-gray-600">

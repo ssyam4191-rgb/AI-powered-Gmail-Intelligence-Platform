@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
   Send, Brain, ArrowLeft, Plus, Loader2, ExternalLink,
-  MessageSquare, AlertCircle
+  MessageSquare, Menu, X
 } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -49,6 +49,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -73,7 +74,6 @@ export default function ChatPage() {
     setInput("")
     setLoading(true)
 
-    // Optimistic update
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -85,19 +85,13 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: activeSession,
-          message: messageText,
-          history,
-        }),
+        body: JSON.stringify({ sessionId: activeSession, message: messageText, history }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        // Surface the actual error from the server if available
         const errMsg = data?.error || `Server error (${res.status})`
-        console.error("Chat API error:", errMsg, data)
         toast.error(errMsg)
         setMessages((prev) => prev.slice(0, -1))
         return
@@ -110,8 +104,6 @@ export default function ChatPage() {
         sources: data.sources || [],
       }
       setMessages((prev) => [...prev, assistantMsg])
-
-      // Update conversation history for multi-turn context
       setHistory((prev) => [
         ...prev,
         { role: "user", content: messageText },
@@ -123,8 +115,7 @@ export default function ChatPage() {
         loadSessions()
       }
     } catch (err) {
-      console.error("Chat fetch error:", err)
-      toast.error("Failed to get response — check the browser console for details")
+      toast.error("Failed to get response")
       setMessages((prev) => prev.slice(0, -1))
     } finally {
       setLoading(false)
@@ -135,6 +126,7 @@ export default function ChatPage() {
     setActiveSession(null)
     setMessages([])
     setHistory([])
+    setSidebarOpen(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -146,20 +138,44 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-gray-950 overflow-hidden">
-      {/* Sessions sidebar */}
-      <aside className="w-64 flex-shrink-0 glass border-r border-white/5 flex flex-col">
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sessions sidebar — drawer on mobile */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 w-72 flex flex-col glass border-r border-white/5
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          md:relative md:translate-x-0 md:w-64 md:flex-shrink-0
+        `}
+      >
         <div className="p-4 border-b border-white/5">
-          <div className="flex items-center gap-2 mb-3">
-            <button
-              onClick={() => router.push("/inbox")}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
+          <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
-              <Brain className="w-5 h-5 text-indigo-400" />
-              <span className="font-semibold text-white text-sm">AI Chat Agent</span>
+              <button
+                onClick={() => router.push("/inbox")}
+                className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-2">
+                <Brain className="w-5 h-5 text-indigo-400" />
+                <span className="font-semibold text-white text-sm">AI Chat Agent</span>
+              </div>
             </div>
+            <button
+              className="md:hidden p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
           <button
             id="new-chat-btn"
@@ -178,10 +194,7 @@ export default function ChatPage() {
           {sessions.map((s) => (
             <button
               key={s.id}
-              onClick={() => {
-                setActiveSession(s.id)
-                // Could load session messages here
-              }}
+              onClick={() => { setActiveSession(s.id); setSidebarOpen(false) }}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
                 activeSession === s.id
                   ? "bg-indigo-600/20 text-indigo-300"
@@ -198,29 +211,43 @@ export default function ChatPage() {
       </aside>
 
       {/* Chat area */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/5 glass">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 glass shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
               <Brain className="w-4 h-4 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="font-semibold text-white text-sm">Gmail Intelligence Agent</h1>
-              <p className="text-xs text-gray-500">Ask anything about your emails</p>
+              <p className="text-xs text-gray-500 hidden sm:block">Ask anything about your emails</p>
             </div>
+            {/* Mobile back button */}
+            <button
+              className="md:hidden ml-auto p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={() => router.push("/inbox")}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
           {messages.length === 0 && (
             <div className="max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-8 h-8 text-indigo-400" />
+              <div className="text-center mb-6 sm:mb-8">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
+                  <Brain className="w-7 h-7 sm:w-8 sm:h-8 text-indigo-400" />
                 </div>
-                <h2 className="text-xl font-semibold text-white mb-2">
+                <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">
                   Your AI Email Assistant
                 </h2>
                 <p className="text-gray-500 text-sm max-w-md mx-auto">
@@ -245,13 +272,13 @@ export default function ChatPage() {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`message-appear flex gap-4 max-w-4xl mx-auto w-full ${
+              className={`message-appear flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full ${
                 msg.role === "user" ? "flex-row-reverse" : "flex-row"
               }`}
             >
               {/* Avatar */}
               <div
-                className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-semibold ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-semibold ${
                   msg.role === "user"
                     ? "bg-gray-700 text-gray-300"
                     : "bg-gradient-to-br from-indigo-500 to-violet-600 text-white"
@@ -261,17 +288,15 @@ export default function ChatPage() {
               </div>
 
               {/* Bubble */}
-              <div className={`flex-1 ${msg.role === "user" ? "flex justify-end" : ""}`}>
+              <div className={`flex-1 min-w-0 ${msg.role === "user" ? "flex justify-end" : ""}`}>
                 <div
-                  className={`rounded-2xl px-5 py-4 ${
+                  className={`rounded-2xl px-4 py-3 sm:px-5 sm:py-4 ${
                     msg.role === "user"
-                      ? "bg-indigo-600 text-white max-w-xl"
-                      : "glass border border-white/5 text-gray-200"
+                      ? "bg-indigo-600 text-white max-w-[85%] sm:max-w-xl"
+                      : "glass border border-white/5 text-gray-200 w-full"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {msg.content}
-                  </p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
 
                   {/* Sources */}
                   {msg.sources && msg.sources.length > 0 && (
@@ -286,14 +311,13 @@ export default function ChatPage() {
                             className="flex items-start gap-2 px-3 py-2 rounded-lg bg-indigo-950/40 border border-indigo-500/15"
                           >
                             <ExternalLink className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs font-medium text-indigo-300 truncate">
                                 {src.subject || "(No Subject)"}
                               </p>
                               <p className="text-xs text-gray-500">
                                 {src.from_name || src.from_email}
-                                {src.sent_at &&
-                                  ` · ${format(new Date(src.sent_at), "MMM d, yyyy")}`}
+                                {src.sent_at && ` · ${format(new Date(src.sent_at), "MMM d, yyyy")}`}
                               </p>
                             </div>
                             {src.similarity && (
@@ -312,11 +336,11 @@ export default function ChatPage() {
           ))}
 
           {loading && (
-            <div className="message-appear flex gap-4 max-w-4xl mx-auto w-full">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+            <div className="message-appear flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
                 <Brain className="w-4 h-4 text-white" />
               </div>
-              <div className="glass border border-white/5 rounded-2xl px-5 py-4">
+              <div className="glass border border-white/5 rounded-2xl px-4 py-3 sm:px-5 sm:py-4">
                 <div className="flex items-center gap-2 text-gray-500">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-sm">Searching your emails and reasoning...</span>
@@ -329,16 +353,16 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-white/5 glass">
+        <div className="p-3 sm:p-4 border-t border-white/5 glass shrink-0">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-end gap-3 glass rounded-2xl border border-white/10 px-4 py-3">
+            <div className="flex items-end gap-2 sm:gap-3 glass rounded-2xl border border-white/10 px-3 sm:px-4 py-2 sm:py-3">
               <textarea
                 ref={inputRef}
                 id="chat-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about your emails... (Enter to send, Shift+Enter for new line)"
+                placeholder="Ask about your emails..."
                 rows={1}
                 className="flex-1 bg-transparent text-gray-200 placeholder-gray-600 text-sm resize-none outline-none leading-relaxed max-h-32"
                 style={{ minHeight: "24px" }}
@@ -352,7 +376,7 @@ export default function ChatPage() {
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-gray-700 text-center mt-2">
+            <p className="text-xs text-gray-700 text-center mt-2 hidden sm:block">
               Answers are grounded exclusively in your emails. Sources are always cited.
             </p>
           </div>

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
-  Mail, Brain, Pencil, RefreshCw, LogOut, Search,
-  Inbox, Tag, ChevronRight, Loader2
+  Mail, Brain, Pencil, RefreshCw, LogOut,
+  Inbox, Tag, ChevronRight, Loader2, Menu, X
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { toast } from "sonner"
@@ -52,6 +52,7 @@ export default function InboxPage() {
   const [selectedCategory, setSelectedCategory] = useState<Category>("All")
   const [syncing, setSyncing] = useState(false)
   const [composeOpen, setComposeOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [total, setTotal] = useState(0)
@@ -90,6 +91,7 @@ export default function InboxPage() {
   const handleCategoryChange = (cat: Category) => {
     setSelectedCategory(cat)
     setPage(1)
+    setSidebarOpen(false)
     fetchThreads(cat, 1)
   }
 
@@ -111,26 +113,48 @@ export default function InboxPage() {
 
   return (
     <div className="flex h-screen bg-gray-950 overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 glass border-r border-white/5 flex flex-col">
-        {/* Logo */}
-        <div className="p-5 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+
+      {/* Mobile overlay backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — fixed drawer on mobile, static on desktop */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 w-72 flex flex-col glass border-r border-white/5
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          md:relative md:translate-x-0 md:w-64 md:flex-shrink-0
+        `}
+      >
+        {/* Logo + mobile close */}
+        <div className="p-5 border-b border-white/5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
               <Brain className="w-5 h-5 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="font-bold text-white text-sm">Gmail Intelligence</div>
               <div className="text-gray-500 text-xs">AI Email Platform</div>
             </div>
           </div>
+          <button
+            className="md:hidden p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition-colors shrink-0"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Actions */}
         <div className="p-4 space-y-2">
           <button
             id="compose-btn"
-            onClick={() => setComposeOpen(true)}
+            onClick={() => { setComposeOpen(true); setSidebarOpen(false) }}
             className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-colors"
           >
             <Pencil className="w-4 h-4" />
@@ -191,9 +215,32 @@ export default function InboxPage() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-white/5 glass flex items-center gap-4">
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Mobile top bar */}
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/5 glass shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+              <Brain className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-bold text-white text-sm truncate">Gmail Intelligence</span>
+          </div>
+          <button
+            onClick={() => setComposeOpen(true)}
+            className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Desktop header */}
+        <div className="hidden md:flex px-6 py-4 border-b border-white/5 glass items-center gap-4 shrink-0">
           <div className="flex-1 flex items-center gap-3">
             <Inbox className="w-5 h-5 text-indigo-400" />
             <h1 className="text-lg font-semibold text-white">
@@ -207,6 +254,40 @@ export default function InboxPage() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Mobile: title + horizontal category pills */}
+        <div className="md:hidden shrink-0 border-b border-white/5">
+          <div className="flex items-center justify-between px-4 pt-3 pb-1">
+            <h1 className="text-base font-semibold text-white">
+              {selectedCategory === "All" ? "Inbox" : selectedCategory}
+              <span className="text-gray-600 text-sm font-normal ml-1.5">({total})</span>
+            </h1>
+            <button
+              onClick={() => fetchThreads()}
+              className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+          <div
+            className="flex gap-2 px-4 pb-3 overflow-x-auto"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+          >
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => handleCategoryChange(cat)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  selectedCategory === cat
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white/5 text-gray-400 border border-white/10 hover:border-indigo-500/30 hover:text-gray-200"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Thread list */}
@@ -236,71 +317,68 @@ export default function InboxPage() {
                 const latest = getLatestEmail(thread)
                 const isUnread = latest && !latest.is_read
                 const timeAgo = thread.last_message_at
-                  ? formatDistanceToNow(new Date(thread.last_message_at), {
-                      addSuffix: true,
-                    })
+                  ? formatDistanceToNow(new Date(thread.last_message_at), { addSuffix: true })
                   : ""
 
                 return (
                   <div
                     key={thread.id}
                     id={`thread-${thread.id}`}
-                    className={`thread-item px-6 py-4 cursor-pointer border border-transparent ${
+                    className={`thread-item px-4 sm:px-6 py-3 sm:py-4 cursor-pointer border border-transparent transition-colors hover:bg-white/[0.02] ${
                       isUnread ? "bg-indigo-950/20" : ""
                     }`}
-                    onClick={() => router.push(`/thread/${thread.id}`)}
+                    onClick={() => {
+                      // Optimistically mark as read in local state
+                      setThreads((prev) =>
+                        prev.map((t) =>
+                          t.id === thread.id
+                            ? { ...t, emails: t.emails.map((e) => ({ ...e, is_read: true })) }
+                            : t
+                        )
+                      )
+                      router.push(`/thread/${thread.id}`)
+                    }}
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3">
                       {/* Unread indicator */}
-                      <div className="mt-1.5 shrink-0">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            isUnread ? "bg-indigo-400" : "bg-transparent"
-                          }`}
-                        />
+                      <div className="mt-2 shrink-0">
+                        <div className={`w-2 h-2 rounded-full ${isUnread ? "bg-indigo-400" : "bg-transparent"}`} />
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className={`text-sm truncate ${
-                                isUnread ? "font-semibold text-white" : "text-gray-300"
-                              }`}
-                            >
+                        {/* Row 1: sender + time */}
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`text-sm truncate ${isUnread ? "font-semibold text-white" : "text-gray-300"}`}>
                               {latest?.from_name || latest?.from_email || thread.participants[0] || "Unknown"}
                             </span>
                             {thread.message_count > 1 && (
-                              <span className="text-xs text-gray-600 shrink-0">
-                                ({thread.message_count})
-                              </span>
+                              <span className="text-xs text-gray-600 shrink-0">({thread.message_count})</span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <CategoryBadge category={thread.category} />
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-xs text-gray-600">{timeAgo}</span>
-                            <ChevronRight className="w-4 h-4 text-gray-700" />
+                            <ChevronRight className="w-3.5 h-3.5 text-gray-700" />
                           </div>
                         </div>
 
-                        <p
-                          className={`text-sm mb-1 truncate ${
-                            isUnread ? "text-gray-200" : "text-gray-400"
-                          }`}
-                        >
+                        {/* Row 2: subject */}
+                        <p className={`text-sm mb-1 truncate ${isUnread ? "text-gray-200" : "text-gray-400"}`}>
                           {thread.subject || "(No Subject)"}
                         </p>
 
-                        {thread.summary ? (
-                          <p className="text-xs text-indigo-400/80 truncate">
-                            ✦ {thread.summary}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-gray-600 truncate">
-                            {latest?.snippet}
-                          </p>
-                        )}
+                        {/* Row 3: badge + snippet/summary */}
+                        <div className="flex items-center gap-2">
+                          <span className="hidden sm:block shrink-0">
+                            <CategoryBadge category={thread.category} />
+                          </span>
+                          {thread.summary ? (
+                            <p className="text-xs text-indigo-400/80 truncate">✦ {thread.summary}</p>
+                          ) : (
+                            <p className="text-xs text-gray-600 truncate">{latest?.snippet}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

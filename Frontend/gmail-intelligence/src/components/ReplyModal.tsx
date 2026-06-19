@@ -87,8 +87,8 @@ export default function ReplyModal({ open, onClose, threadId, threadSubject }: R
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-2xl glass rounded-2xl border border-white/10 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm">
+      <div className="w-full sm:max-w-2xl glass rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export default function ReplyModal({ open, onClose, threadId, threadSubject }: R
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {step === "prompt" ? (
             <div className="space-y-4">
               <div className="text-sm text-gray-400">
@@ -120,6 +120,12 @@ export default function ReplyModal({ open, onClose, threadId, threadSubject }: R
                 id="reply-prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleGenerate()
+                  }
+                }}
                 placeholder='e.g. "Politely decline the invitation, stating that I have a conflict on Thursday morning, but offer Thursday afternoon instead."'
                 rows={4}
                 className="w-full bg-gray-900/50 border border-white/10 rounded-xl px-4 py-3 text-gray-200 placeholder-gray-600 text-sm resize-none outline-none focus:border-indigo-500/50 transition-colors"
@@ -144,7 +150,7 @@ export default function ReplyModal({ open, onClose, threadId, threadSubject }: R
           ) : draft ? (
             <div className="space-y-4">
               <div className="grid gap-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">To</label>
                     <input
