@@ -43,6 +43,9 @@ export async function GET(
   return NextResponse.json({ thread, messages })
 }
 
+/**
+ * PATCH /api/threads/[id] — Mark all emails in a thread as read
+ */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
