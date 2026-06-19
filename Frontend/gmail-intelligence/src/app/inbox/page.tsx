@@ -248,7 +248,23 @@ export default function InboxPage() {
                     className={`thread-item px-6 py-4 cursor-pointer border border-transparent ${
                       isUnread ? "bg-indigo-950/20" : ""
                     }`}
-                    onClick={() => router.push(`/thread/${thread.id}`)}
+                    onClick={() => {
+                      // Optimistically mark as read in local state
+                      setThreads((prev) =>
+                        prev.map((t) =>
+                          t.id === thread.id
+                            ? {
+                                ...t,
+                                emails: t.emails.map((e) => ({
+                                  ...e,
+                                  is_read: true,
+                                })),
+                              }
+                            : t
+                        )
+                      )
+                      router.push(`/thread/${thread.id}`)
+                    }}
                   >
                     <div className="flex items-start gap-4">
                       {/* Unread indicator */}

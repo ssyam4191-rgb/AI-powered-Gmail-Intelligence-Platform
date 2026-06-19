@@ -66,6 +66,11 @@ export default function ThreadPage({
       })
       .catch(() => toast.error("Failed to load thread"))
       .finally(() => setLoading(false))
+
+    // Mark all emails in this thread as read
+    fetch(`/api/threads/${id}`, { method: "PATCH" }).catch(() => {
+      // silently ignore — non-critical
+    })
   }, [id])
 
   const toggleExpand = (msgId: string) => {
