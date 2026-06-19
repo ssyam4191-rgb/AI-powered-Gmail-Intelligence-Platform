@@ -22,6 +22,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           prompt: "consent",
         },
       },
+      // Enable PKCE and state checks for secure OAuth 2.0 flow to prevent authorization code interception attacks
+      checks: ["pkce", "state"],
     }),
   ],
   callbacks: {

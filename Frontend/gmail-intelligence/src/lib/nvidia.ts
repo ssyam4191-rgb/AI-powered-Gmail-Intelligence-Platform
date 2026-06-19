@@ -27,9 +27,10 @@ const CATEGORIES: EmailCategory[] = [
 // ============================================================
 // Core NIM API call
 // ============================================================
-async function nimCompletion(
+export async function nimCompletion(
   messages: Array<{ role: string; content: string }>,
-  maxTokens = 50
+  maxTokens = 50,
+  temperature = 0.1
 ): Promise<string> {
   const response = await fetch(`${NIM_BASE_URL}/chat/completions`, {
     method: "POST",
@@ -41,7 +42,7 @@ async function nimCompletion(
       model: NIM_MODEL,
       messages,
       max_tokens: maxTokens,
-      temperature: 0.1, // Low temperature for deterministic classification
+      temperature,
     }),
   })
 

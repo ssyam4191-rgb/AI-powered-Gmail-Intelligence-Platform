@@ -70,14 +70,24 @@ function sleep(ms: number) {
 // Email Parsing Utilities
 // ============================================================
 export function parseEmailAddress(raw: string): { email: string; name: string } {
-  const match = raw.match(/^"?([^"<]*)"?\s*<?([^>]+)>?$/)
-  if (match) {
+  const trimmed = raw.trim()
+
+  // Format: "Name <email@domain.com>" or <email@domain.com>
+  const angleMatch = trimmed.match(/^"?([^"<]*)"?\s*<([^>]+)>\s*$/)
+  if (angleMatch) {
     return {
-      name: match[1].trim(),
-      email: match[2].trim().toLowerCase(),
+      name: angleMatch[1].trim(),
+      email: angleMatch[2].trim().toLowerCase(),
     }
   }
-  return { name: "", email: raw.trim().toLowerCase() }
+
+  // Format: bare email address (contains @)
+  if (trimmed.includes("@")) {
+    return { name: "", email: trimmed.toLowerCase() }
+  }
+
+  // Fallback: raw string is a display name only — not a valid email
+  return { name: trimmed, email: "" }
 }
 
 export function decodeBase64(encoded: string): string {
@@ -147,7 +157,7 @@ export function parseGmailMessage(msg: any): ParsedEmail {
     ? toRaw
         .split(",")
         .map((s: string) => parseEmailAddress(s.trim()).email)
-        .filter(Boolean)
+        .filter((e: string) => e.includes("@"))  // only keep valid email addresses
     : []
 
   const ccRaw = getHeader(headers, "Cc")
@@ -155,7 +165,7 @@ export function parseGmailMessage(msg: any): ParsedEmail {
     ? ccRaw
         .split(",")
         .map((s: string) => parseEmailAddress(s.trim()).email)
-        .filter(Boolean)
+        .filter((e: string) => e.includes("@"))  // only keep valid email addresses
     : []
 
   const subject = getHeader(headers, "Subject") || "(No Subject)"
