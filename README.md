@@ -13,9 +13,11 @@ Powered by **Next.js 16**, **Supabase (pgvector)**, **Google Gemini 2.5 Flash**,
 > 3. **Dual AI Engines with Auto Backup**: The app uses two AI models: **Google Gemini 2.5 Flash** (Primary Engine) and **NVIDIA NIM Llama 3.1 8B** (Secondary Engine). If a Gemini request fails (due to rate limits, API quotas, or network issues), the app automatically switches to the NVIDIA model to get the response.
 
 ---
-## 🎥 Project Demo
+<h2>🎥 Demo Video</h2>
 
-[![Watch Demo](https://img.youtube.com/vi/N1FWMcACCCU/maxresdefault.jpg)](https://www.youtube.com/watch?v=N1FWMcACCCU)
+<a href="https://www.youtube.com/watch?v=N1FWMcACCCU">
+  <img src="https://img.youtube.com/vi/N1FWMcACCCU/maxresdefault.jpg" width="800">
+</a>
 ---
 
 ## 🚀 Key Features
