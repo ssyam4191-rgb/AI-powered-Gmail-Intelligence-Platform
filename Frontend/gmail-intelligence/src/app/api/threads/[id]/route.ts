@@ -41,3 +41,31 @@ export async function GET(
 
   return NextResponse.json({ thread, messages })
 }
+
+/**
+ * PATCH /api/threads/[id] — Mark all emails in a thread as read
+ */
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  if (!session?.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { id } = await params
+  const supabase = createAdminClient()
+
+  const { error } = await supabase
+    .from("emails")
+    .update({ is_read: true })
+    .eq("thread_id", id)
+    .eq("user_id", session.userId)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
