@@ -1,5 +1,3 @@
-// Supabase client configuration
-// src/lib/supabase/client.ts - browser-side client
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/types/database";
 

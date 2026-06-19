@@ -1,7 +1,3 @@
-/**
- * POST /api/compose — Generate AI email draft
- * Body: { prompt: string }
- */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { composeEmail } from "@/lib/gemini"

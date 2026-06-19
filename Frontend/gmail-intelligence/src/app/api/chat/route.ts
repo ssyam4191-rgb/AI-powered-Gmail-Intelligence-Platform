@@ -1,7 +1,3 @@
-/**
- * POST /api/chat — AI Chat Agent endpoint
- * Body: { sessionId: string, message: string, history?: Array<{role, content}> }
- */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { createAdminClient } from "@/lib/supabase/server"

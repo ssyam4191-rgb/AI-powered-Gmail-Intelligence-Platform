@@ -1,7 +1,3 @@
-/**
- * POST /api/send — Send email via Gmail API
- * Body: { to, subject, body, inReplyTo?, references?, threadId? }
- */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { createAdminClient } from "@/lib/supabase/server"

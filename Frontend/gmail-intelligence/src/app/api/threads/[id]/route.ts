@@ -1,7 +1,3 @@
-/**
- * GET  /api/threads/[id] — Full thread with all messages
- * PATCH /api/threads/[id] — Mark all emails in thread as read
- */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { createAdminClient } from "@/lib/supabase/server"

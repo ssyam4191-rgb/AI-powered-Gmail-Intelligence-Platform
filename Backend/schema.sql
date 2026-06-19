@@ -1,15 +1,5 @@
--- ============================================================
--- Gmail Intelligence Platform — Supabase Database Schema
--- Run this in: Supabase Dashboard → SQL Editor
--- ============================================================
-
--- Enable pgvector extension for semantic search
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- ============================================================
--- TABLE: users
--- Stores Gmail OAuth tokens and sync state per user
--- ============================================================
 CREATE TABLE IF NOT EXISTS users (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email         TEXT NOT NULL UNIQUE,
@@ -21,10 +11,6 @@ CREATE TABLE IF NOT EXISTS users (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: email_threads
--- One row per Gmail thread; thread-level AI summaries & embeddings
--- ============================================================
 CREATE TABLE IF NOT EXISTS email_threads (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -41,10 +27,6 @@ CREATE TABLE IF NOT EXISTS email_threads (
   UNIQUE(user_id, gmail_thread_id)
 );
 
--- ============================================================
--- TABLE: emails
--- One row per individual Gmail message; per-message AI data
--- ============================================================
 CREATE TABLE IF NOT EXISTS emails (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -70,10 +52,7 @@ CREATE TABLE IF NOT EXISTS emails (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: chat_sessions
--- Each conversation with the AI agent
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -81,11 +60,7 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: chat_messages
--- Individual messages within a chat session
--- sources: JSON array of {email_id, subject, from_email, sent_at, similarity}
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS chat_messages (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id  UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
@@ -96,10 +71,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: sync_jobs
--- Tracks the progress of Gmail sync operations
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS sync_jobs (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -113,9 +85,7 @@ CREATE TABLE IF NOT EXISTS sync_jobs (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- INDEXES
--- ============================================================
+
 
 -- Inbox listing: user's emails by date desc
 CREATE INDEX IF NOT EXISTS idx_emails_user_sent ON emails(user_id, sent_at DESC);
@@ -145,11 +115,6 @@ CREATE INDEX IF NOT EXISTS idx_threads_embedding ON email_threads
 -- Sync job status
 CREATE INDEX IF NOT EXISTS idx_sync_jobs_user ON sync_jobs(user_id, created_at DESC);
 
--- ============================================================
--- FUNCTION: match_emails
--- Vector similarity search for RAG pipeline
--- Returns top K most semantically similar emails to a query
--- ============================================================
 CREATE OR REPLACE FUNCTION match_emails(
   query_embedding  VECTOR(768),
   match_count      INT DEFAULT 10,
@@ -199,10 +164,7 @@ BEGIN
 END;
 $$;
 
--- ============================================================
--- ROW LEVEL SECURITY (RLS)
--- Users can only read/write their own data
--- ============================================================
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE emails ENABLE ROW LEVEL SECURITY;

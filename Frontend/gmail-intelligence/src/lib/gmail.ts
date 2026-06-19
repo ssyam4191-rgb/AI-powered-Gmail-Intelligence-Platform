@@ -1,13 +1,7 @@
-/**
- * Gmail API client with rate limiting and exponential backoff
- * Wraps the googleapis library with proper error handling
- */
 import { google } from "googleapis"
 import { createAdminClient } from "@/lib/supabase/server"
 
-// ============================================================
-// OAuth2 Client Factory
-// ============================================================
+
 export function createOAuth2Client(accessToken: string, refreshToken?: string) {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -26,9 +20,7 @@ export function createGmailClient(accessToken: string, refreshToken?: string) {
   return google.gmail({ version: "v1", auth })
 }
 
-// ============================================================
-// Rate Limiting — Exponential Backoff
-// ============================================================
+
 const BACKOFF_BASE_MS = 100
 const BACKOFF_MAX_MS = 32000
 const MAX_RETRIES = 7
@@ -66,9 +58,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// ============================================================
-// Email Parsing Utilities
-// ============================================================
+
 export function parseEmailAddress(raw: string): { email: string; name: string } {
   const trimmed = raw.trim()
 
@@ -155,17 +145,17 @@ export function parseGmailMessage(msg: any): ParsedEmail {
   const toRaw = getHeader(headers, "To")
   const toEmails = toRaw
     ? toRaw
-        .split(",")
-        .map((s: string) => parseEmailAddress(s.trim()).email)
-        .filter((e: string) => e.includes("@"))  // only keep valid email addresses
+      .split(",")
+      .map((s: string) => parseEmailAddress(s.trim()).email)
+      .filter((e: string) => e.includes("@"))  // only keep valid email addresses
     : []
 
   const ccRaw = getHeader(headers, "Cc")
   const ccEmails = ccRaw
     ? ccRaw
-        .split(",")
-        .map((s: string) => parseEmailAddress(s.trim()).email)
-        .filter((e: string) => e.includes("@"))  // only keep valid email addresses
+      .split(",")
+      .map((s: string) => parseEmailAddress(s.trim()).email)
+      .filter((e: string) => e.includes("@"))  // only keep valid email addresses
     : []
 
   const subject = getHeader(headers, "Subject") || "(No Subject)"
@@ -211,9 +201,6 @@ export function parseGmailMessage(msg: any): ParsedEmail {
   }
 }
 
-// ============================================================
-// Gmail Sync — Initial Sync (Paginated)
-// ============================================================
 export async function* listAllMessageIds(
   gmail: any,
   maxResults = 500
@@ -241,11 +228,7 @@ export async function* listAllMessageIds(
   } while (true)
 }
 
-// ============================================================
-// Batch fetch messages (up to 100 per batch via individual calls with concurrency)
-// Gmail API doesn't support HTTP batch in the client library easily,
-// so we fetch with controlled concurrency (10 at a time)
-// ============================================================
+
 export async function fetchMessagesInBatch(
   gmail: any,
   messageIds: string[],
@@ -270,9 +253,6 @@ export async function fetchMessagesInBatch(
   return results
 }
 
-// ============================================================
-// Gmail Sync — Incremental Sync via History API
-// ============================================================
 export async function fetchHistoryChanges(
   gmail: any,
   startHistoryId: string
@@ -315,9 +295,7 @@ export async function fetchHistoryChanges(
   return { addedMessageIds, removedMessageIds }
 }
 
-// ============================================================
-// Send Email via Gmail API
-// ============================================================
+
 export async function sendEmail(
   gmail: any,
   {

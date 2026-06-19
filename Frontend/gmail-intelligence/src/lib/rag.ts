@@ -1,7 +1,3 @@
-/**
- * RAG (Retrieval-Augmented Generation) Pipeline
- * Uses pgvector in Supabase for semantic email search
- */
 import { createAdminClient } from "@/lib/supabase/server"
 import { generateQueryEmbedding } from "@/lib/gemini"
 
@@ -22,9 +18,7 @@ export interface RetrievedEmail {
   similarity: number
 }
 
-// ============================================================
-// Retrieve relevant emails for a query using pgvector
-// ============================================================
+
 export async function retrieveRelevantEmails(
   query: string,
   userId: string,
@@ -60,9 +54,6 @@ export async function retrieveRelevantEmails(
   return filtered
 }
 
-// ============================================================
-// Hybrid search: vector + keyword (BM25-style via Supabase full-text)
-// ============================================================
 export async function hybridSearchEmails(
   query: string,
   userId: string,
@@ -89,9 +80,9 @@ export async function hybridSearchEmails(
   const keywordEmails =
     keywordResults.status === "fulfilled" && !keywordResults.value.error
       ? (keywordResults.value.data || []).map((e: any) => ({
-          ...e,
-          similarity: 0.5, // Default similarity for keyword matches
-        }))
+        ...e,
+        similarity: 0.5, // Default similarity for keyword matches
+      }))
       : []
 
   // Merge and deduplicate by gmail_message_id, prioritizing vector results

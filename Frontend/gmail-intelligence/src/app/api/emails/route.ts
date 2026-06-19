@@ -1,7 +1,3 @@
-/**
- * GET /api/emails — List emails with filters
- * Query params: category, page, limit, search, threadId
- */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { createAdminClient } from "@/lib/supabase/server"

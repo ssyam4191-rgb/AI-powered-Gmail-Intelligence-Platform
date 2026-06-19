@@ -1,7 +1,3 @@
-/**
- * Google Gemini AI client
- * Handles: email summarization, compose, reply, chat agent, embeddings
- */
 import { GoogleGenerativeAI, TaskType } from "@google/generative-ai"
 import type { EmailCategory } from "@/types/database"
 import { nimCompletion } from "./nvidia"
@@ -11,9 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 const flashModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 const embeddingModel = genAI.getGenerativeModel({ model: "gemini-embedding-2" })
 
-// ============================================================
-// Embeddings
-// ============================================================
+
 export async function generateEmbedding(text: string): Promise<number[]> {
   const result = await embeddingModel.embedContent({
     content: { role: "user", parts: [{ text: text.slice(0, 8000) }] },
@@ -32,9 +26,6 @@ export async function generateQueryEmbedding(text: string): Promise<number[]> {
   return result.embedding.values
 }
 
-// ============================================================
-// Email Summarization
-// ============================================================
 export async function summarizeEmail(email: {
   subject: string
   from: string
@@ -96,9 +87,6 @@ Thread Summary:`
   }
 }
 
-// ============================================================
-// Compose New Email
-// ============================================================
 export async function composeEmail(prompt: string): Promise<{
   subject: string
   body: string
@@ -135,9 +123,7 @@ Write in a professional, clear tone. Include proper greeting and sign-off.`
   return JSON.parse(jsonMatch[0])
 }
 
-// ============================================================
-// Reply to Email Thread
-// ============================================================
+
 export async function generateReply(params: {
   threadMessages: Array<{ from: string; body: string; sentAt?: string }>
   latestSubject: string
@@ -174,9 +160,6 @@ Write ONLY the reply body text (no subject line, no metadata). Be professional, 
   }
 }
 
-// ============================================================
-// Chat Agent — RAG-powered Q&A
-// ============================================================
 export interface ChatSource {
   email_id: string
   gmail_message_id: string
@@ -302,9 +285,6 @@ Answer the user's question based ONLY on the above emails. Cite sources explicit
   return { answer, sources }
 }
 
-// ============================================================
-// Newsletter Deduplication (Bonus Feature)
-// ============================================================
 export async function extractNewsItems(
   newsletterBody: string,
   source: string

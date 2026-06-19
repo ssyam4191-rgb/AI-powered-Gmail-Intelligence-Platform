@@ -1,12 +1,3 @@
-/**
- * NVIDIA NIM API client
- * Used for: Email categorization (llama-3.1-8b-instruct via OpenAI-compatible API)
- * 
- * Why NIM for categorization:
- * - Simple classification task doesn't need Gemini's complexity
- * - Free tier with high throughput — perfect for batch processing during sync
- * - OpenAI-compatible API makes it trivial to integrate
- */
 import type { EmailCategory } from "@/types/database"
 
 const NIM_BASE_URL =
@@ -24,9 +15,7 @@ const CATEGORIES: EmailCategory[] = [
   "Uncategorized",
 ]
 
-// ============================================================
-// Core NIM API call
-// ============================================================
+
 export async function nimCompletion(
   messages: Array<{ role: string; content: string }>,
   maxTokens = 50,
@@ -55,9 +44,7 @@ export async function nimCompletion(
   return data.choices?.[0]?.message?.content?.trim() || ""
 }
 
-// ============================================================
-// Categorize a single email
-// ============================================================
+
 export async function categorizeEmail(email: {
   subject: string
   from: string
@@ -95,9 +82,7 @@ Reply with ONLY the category name, nothing else:`
   return matched || "Uncategorized"
 }
 
-// ============================================================
-// Batch categorize multiple emails
-// ============================================================
+
 export async function categorizeEmailsBatch(
   emails: Array<{
     id: string

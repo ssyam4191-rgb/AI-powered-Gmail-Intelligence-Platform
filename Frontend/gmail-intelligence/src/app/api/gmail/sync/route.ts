@@ -1,7 +1,3 @@
-/**
- * POST /api/gmail/sync
- * Triggers Gmail sync (initial or incremental) for the authenticated user
- */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { createAdminClient } from "@/lib/supabase/server"

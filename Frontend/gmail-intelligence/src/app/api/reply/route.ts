@@ -1,7 +1,3 @@
-/**
- * POST /api/reply — Generate AI reply draft for a thread
- * Body: { threadId: string, prompt: string }
- */
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { createAdminClient } from "@/lib/supabase/server"
