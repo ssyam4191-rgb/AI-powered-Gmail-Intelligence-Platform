@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+Frontend/gmail-intelligence/public/Demo_Video.mp4
