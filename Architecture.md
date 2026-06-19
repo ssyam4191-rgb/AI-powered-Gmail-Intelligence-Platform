@@ -1,72 +1,73 @@
 # AI-Powered Gmail Intelligence Platform
 ## Architecture & Design Document
 
-This document outlines the technical architecture, design decisions, database schemas, and AI integrations for the **Gmail Intelligence Platform**.
+This document outlines the high-level system architecture, design decisions, database schemas, and AI workflow integrations for the **Gmail Intelligence Platform**.
 
 ---
 
-## 1. System Architecture Overview
+## 1. System Architecture
 
-The application is built as a monorepos (Frontend + API Routes) using Next.js 16 (React 19), leveraging server-side actions, route handlers, NextAuth.js for OAuth 2.0 authentication, and Supabase (PostgreSQL with `pgvector`) for storing email data, chat sessions, and vector embeddings.
+The application is structured as a full-stack Next.js web application utilizing React Server Components, Client Components, secure Route Handlers, and a Supabase database.
 
 ```
-+-----------------------------------------------------------------------+
-|                       Next.js App (React 19 Client)                   |
-|  +--------------+  +---------------+  +------------+  +------------+  |
-|  |   Login UI   |  |   Inbox UI    |  |  RAG Chat  |  | Compose/   |  |
-|  | (OAuth Sign) |  | (Categorized) |  |   Agent    |  | Reply Mod  |  |
-|  +-------+------+  +-------+-------+  +-----+------+  +-----+------+  |
-+----------|-----------------|----------------|---------------|---------+
-           |                 |                |               |
-           v                 v                v               v
-+-----------------------------------------------------------------------+
-|                         Next.js API Route Handlers                    |
-|   /api/auth     /api/gmail/sync      /api/emails    /api/chat         |
-|   /api/compose  /api/reply           /api/send      /api/threads/[id] |
-+----------+-----------------+----------------+---------------+---------+
-           |                 |                |               |
-           v                 v                v               v
-+------------------+ +------------------+ +-----------------------------+
-|    Gmail API     | |  Supabase DB     | |         AI Services         |
-|  (OAuth Scopes:  | |  - PostgreSQL    | | - Gemini 1.5 Flash (LLM)    |
-|   readonly,      | |  - pgvector RAG  | | - Gemini text-embedding-004 |
-|   modify, send)  | |  - RLS Policies  | | - NVIDIA NIM Llama 3.1 8B   |
-+------------------+ +------------------+ +-----------------------------+
+                  +----------------------------------------------+
+                  |           Next.js 16 (React 19 UI)           |
+                  |  Login UI (NextAuth.js Google OAuth)         |
+                  |  Dashboard (Inbox Categories & Summaries)    |
+                  |  RAG Chat Agent Panel & Compose Modals       |
+                  +----------------------+-----------------------+
+                                         |
+                                         v HTTP / API
+                  +----------------------+-----------------------+
+                  |       Next.js API Route Handlers (Backend)   |
+                  |  /api/gmail/sync  |  /api/chat  |  /api/send |
+                  +-----------+--------------+--------------+----+
+                              |              |              |
+         +--------------------+              |              +--------------------+
+         v OAuth Calls                       v Queries / RPC                     v API Calls
++------------------+                +--------+---------+                +------------------+
+|    Gmail API     |                |   Supabase DB    |                |   AI Services    |
+| (google-api-sdk) |                | (PostgreSQL with |                | - Gemini 2.5     |
+| Syncs/sends mail |                |    pgvector)     |                |   Flash (LLM)    |
+| and updates      |                | RLS enforced.    |                | - Gemini Embed-2 |
+| message state    |                | Stores mail state|                | - NVIDIA NIM     |
+|                  |                | & chat history   |                |   (Llama 3.1 8B) |
++------------------+                +------------------+                +------------------+
 ```
 
 ---
 
-## 2. Technology Stack & Justification
+## 2. Core Technology Stack
 
-| Layer | Technology | Rationale |
+| Component | Technology | Role & Justification |
 | :--- | :--- | :--- |
-| **Framework** | **Next.js 16 (App Router)** | Full-stack capability (Server Components, API Routes), built-in routing, and streamlined deployment. |
-| **Auth** | **NextAuth.js v5 (Auth.js)** | Direct integration with Google OAuth 2.0, secure JWT session management, offline access token refreshing. |
-| **Database** | **Supabase (PostgreSQL)** | Structured schema control, robust SDK, Row-Level Security (RLS), and native `pgvector` support for embedding search. |
-| **Vector Search**| **pgvector** | Integrates vector similarity search (`<=>` cosine similarity) directly in PostgreSQL, avoiding external vector DB overhead. |
-| **Primary LLM** | **Google Gemini 1.5 Flash** | 1-million-token context window (crucial for long email threads), fast inference, structured JSON output, and strong summarization capabilities. |
-| **Categorization**| **NVIDIA NIM (Llama 3.1 8B)**| Fast, low-latency, and cost-effective text classification. Offloads simple classification tasks from Gemini. |
-| **Embeddings** | **Gemini text-embedding-004**| 768-dimensional native embeddings with deep understanding of contextual details in email text. |
-| **Styling** | **TailwindCSS & Lucide Icons**| Ultra-modern, premium dark-mode dashboard styling with glassmorphism effects and micro-animations. |
+| **Framework** | **Next.js 16.2 & React 19** | Full-stack architecture using App Router, enabling secure API Route Handlers and performant Server Components. |
+| **Auth** | **NextAuth.js v5 (Auth.js)** | Manages Google OAuth 2.0 integration, secure JWT cookie session storage, and offline access/refresh token rotation. |
+| **Database** | **Supabase (PostgreSQL)** | Persistent storage of parsed email structure, chat histories, sync states, and strict Row-Level Security (RLS) enforcement. |
+| **Vector Search**| **pgvector extension** | Enables vector similarity search using Cosine distance indices directly in PostgreSQL, avoiding separate vector DB overhead. |
+| **Primary LLM** | **Google Gemini 2.5 Flash** | Core engine for email/thread summarization, smart compose, and RAG. High context window, fast speed, and strong JSON generation. |
+| **Embeddings** | **Gemini Embedding 2** | Generates 768-dimensional document and query embeddings tailored for contextual similarity search. |
+| **Classifier** | **NVIDIA NIM (Llama 3.1 8B)** | Handles low-latency, single-word text classification to categorize incoming emails (Finance, Personal, Work, etc.). |
+| **Styling** | **TailwindCSS 4.0** | Custom styling, glassmorphic dark mode, dashboard UI components, and micro-animations. |
 
 ---
 
-## 3. Database Schema Design
+## 3. Database Schema
 
-The database schema is designed to store synced email data, user credentials, chat histories, and sync logs while keeping security enforced using Postgres Row Level Security (RLS) policies.
+The database schemas are designed for granular email tracking and vector search queries. Row-Level Security (RLS) ensures that users can only query/edit their own data via `user_id = auth.uid()`.
 
 ```mermaid
 erDiagram
-    users ||--o{ email_threads : owns
-    users ||--o{ emails : owns
-    users ||--o{ chat_sessions : has
-    users ||--o{ sync_jobs : triggers
-    email_threads ||--o{ emails : contains
-    chat_sessions ||--o{ chat_messages : contains
+    USERS ||--o{ EMAIL_THREADS : owns
+    USERS ||--o{ EMAILS : owns
+    USERS ||--o{ CHAT_SESSIONS : has
+    USERS ||--o{ SYNC_JOBS : triggers
+    EMAIL_THREADS ||--o{ EMAILS : contains
+    CHAT_SESSIONS ||--o{ CHAT_MESSAGES : contains
 
-    users {
+    USERS {
         uuid id PK
-        string email UK
+        string email
         string gmail_access_token
         string gmail_refresh_token
         timestamp token_expiry
@@ -75,10 +76,10 @@ erDiagram
         timestamp created_at
     }
 
-    email_threads {
+    EMAIL_THREADS {
         uuid id PK
         uuid user_id FK
-        string gmail_thread_id UK
+        string gmail_thread_id
         string subject
         string summary
         string category
@@ -90,11 +91,11 @@ erDiagram
         timestamp created_at
     }
 
-    emails {
+    EMAILS {
         uuid id PK
         uuid user_id FK
         uuid thread_id FK
-        string gmail_message_id UK
+        string gmail_message_id
         string gmail_thread_id
         string from_email
         string from_name
@@ -115,14 +116,14 @@ erDiagram
         timestamp created_at
     }
 
-    chat_sessions {
+    CHAT_SESSIONS {
         uuid id PK
         uuid user_id FK
         string title
         timestamp created_at
     }
 
-    chat_messages {
+    CHAT_MESSAGES {
         uuid id PK
         uuid session_id FK
         uuid user_id FK
@@ -132,7 +133,7 @@ erDiagram
         timestamp created_at
     }
 
-    sync_jobs {
+    SYNC_JOBS {
         uuid id PK
         uuid user_id FK
         string status
@@ -146,56 +147,43 @@ erDiagram
     }
 ```
 
-### Key Schema Operations & Optimizations
-1. **Vector Indexes**: `emails` and `email_threads` embeddings use `ivfflat` (cosine operators) to allow sub-millisecond retrieval of semantic matches.
+### Key Optimizations & Indexes
+1. **Vector Indexes**: Inverted File Flat (`ivfflat`) indexes using `vector_cosine_ops` enable sub-millisecond similarity search queries over the `emails.embedding` and `email_threads.embedding` fields.
 2. **Composite Indexes**:
-   - `emails(user_id, sent_at DESC)` ensures instantaneous email listings.
-   - `email_threads(user_id, last_message_at DESC)` powers the sidebar/inbox dashboard.
-   - `emails(gmail_message_id)` is a unique index to enforce message deduplication.
-3. **Row-Level Security (RLS)**: RLS is active on all tables. A policy `USING (user_id = auth.uid())` prevents users from querying or editing other users' emails or chat history.
+   - `emails(user_id, sent_at DESC)` for instant dashboard chronologies.
+   - `email_threads(user_id, last_message_at DESC)` for active inbox listing.
+3. **Database Rules**: A PostgreSQL function `match_emails` acts as an RPC endpoint for vector calculation, taking query embeddings and returning sorted results based on cosine distance.
 
 ---
 
-## 4. Key AI Workflows & Implementation
+## 4. Key Pipelines & Implementation
 
 ### 4.1 Gmail Sync Pipeline (Rate-Limit Tolerant)
-1. **Trigger**: `/api/gmail/sync` starts the sync process. If a `history_id` exists, it triggers an incremental sync using the Gmail History API; otherwise, it performs an initial full sync.
-2. **Rate Limiting**: Integrated exponential backoff wrapper (`withRetry`) checks for status code `429` (rate limits) and `5xx` errors. It retries requests up to 7 times with randomized delay:
-   $$delay = \min(100 \times 2^{attempt} + \text{jitter}, 32000)\text{ ms}$$
-3. **Concurrency**: Fetches message bodies concurrently in batches (10 concurrent requests at a time) to maximize throughput while respecting the API rate limits.
-4. **Synchronization**: Deduplicates incoming messages using the database's unique constraints and updates `history_id` upon successful completion.
+- **Execution Flow**: Calls `/api/gmail/sync`. Uses standard pagination to import the initial batch (up to 500 emails). For subsequent syncing, it fetches changes using the Gmail History API (`history_id`) to conserve bandwidth and API quota.
+- **Resilience**: Employs an exponential backoff wrapper (`withRetry`) with randomized jitter to handle Gmail API rate limits (HTTP `429` / `403`) and temporary server errors (HTTP `5xx`):
+  $$\text{Delay} = \min(\text{100ms} \times 2^{\text{attempt}} + \text{jitter}, \text{32000ms})$$
+- **Concurrency**: Message metadata and bodies are fetched concurrently in batches of 10 to balance performance and rate-limit boundaries.
 
-### 4.2 Email Categorization (NVIDIA NIM Llama 3.1 8B)
-- **Role**: Offloads classification tasks from Gemini. It categorizes emails into: `Newsletter`, `Job/Recruitment`, `Finance`, `Notifications`, `Personal`, `Work/Professional`, or `Uncategorized`.
-- **System Prompt**: Enforces strict single-word classification based on defined category characteristics:
-  - *Finance*: Invoices, receipts, OTP financial statements.
-  - *Job/Recruitment*: HR letters, interviews, offers.
-  - *Newsletter*: Digests, promotional marketing, blog articles.
-- **Batching**: Categorizes batch messages during sync concurrently.
+### 4.2 AI Categorization & Summarization
+- **Email Categorization**: Offloads text classification from Gemini to a lower-cost, low-latency NVIDIA NIM (Llama 3.1 8B Instruct) deployment. It runs a single-word prompt categorization classifying messages into `Newsletter`, `Job/Recruitment`, `Finance`, `Notifications`, `Personal`, `Work/Professional`, or `Uncategorized`.
+- **Per-Email Summarization**: The Gemini 2.5 Flash model produces 2-3 sentence summaries capturing core action items.
+- **Thread Summarization**: Combines the conversation chronology into a single context window, producing a 3-5 sentence synthesis outlining unresolved items, decisions made, and follow-up duties.
 
-### 4.3 Email & Thread Summarization (Gemini 1.5 Flash)
-- **Email Summaries**: Compiles key takeaways and actionable items in 2-3 sentences.
-- **Thread Summaries**: Concatenates individual messages in ascending order. Long threads are truncated or chunked to fit Gemini's context window. The model synthesizes the entire conversation history, highlighting unresolved threads, decisions made, and follow-ups.
+### 4.3 RAG (Retrieval-Augmented Generation) Chat Agent
+- **Hybrid Search Strategy**:
+  1. **Semantic Search**: Embeds user query with Gemini Embedding 2 and queries `match_emails` in Supabase to return the top-K relevant emails.
+  2. **Keyword Search**: Uses PostgreSQL `websearch_to_tsquery` to match exact spelling keywords and technical identifiers.
+  3. **Merging**: Unifies and deduplicates matches, prioritizing high-scoring semantic records.
+- **Grounding and Attribution**: Pass relevant message blocks as strict context prompts. The model is constrained to only answer queries using context emails and outputs structured citations mapping to database records, enabling source-card render in the chat interface.
 
-### 4.4 RAG (Retrieval-Augmented Generation) Chat Agent
-- **Retrieval**:
-  1. Embeds the user's question via `gemini-text-embedding-004`.
-  2. Runs a semantic similarity cosine distance function (`match_emails` SQL RPC call) in Supabase to extract the top-K relevant emails.
-  3. Complements this with full-text keyword queries (`BM25` hybrid search) to prevent missing technical terms.
-- **Grounding & Citations**:
-  - The context is structured with headers (`From`, `Subject`, `Date`, `Similarity`).
-  - The system prompt instructs Gemini to only output statements grounded in the email context and reject out-of-context answers ("I don't have information about that in your emails").
-  - The response returns structured citations mapped to database entries to render source cards in the UI.
-
-### 4.5 Email Smart Compose & Threaded Replies
-- **Compose**: Analyzes user-described intents and maps them to a structured JSON containing `{ to, subject, body }`.
-- **Replies**: Extracts full historical context of the thread. Incorporates the user prompt to draft a response that maintains context, style, and tone.
-- **Thread Preservation**: Returns appropriate headers (`In-Reply-To` and `References`) to ensure the Gmail thread remains intact when delivered.
+### 4.4 Smart Compose & Thread Preservation
+- **Smart Compose**: Interprets natural language user instructions to compose formatted drafts containing `{ to, subject, body }`.
+- **Threaded Replies**: Analyzes thread history and user notes to draft replies. Injecting headers like `In-Reply-To` and `References` during sending keeps message chains intact under the parent thread inside Google Mail.
 
 ---
 
-## 5. Security & Compliance
+## 5. Security & Privacy
 
-1. **Tokens**: Users' Google OAuth refresh tokens are stored securely in Supabase. Access tokens are used locally in api calls and automatically renewed via Google Auth endpoints when expired.
-2. **Access Control**: Users are authenticated using JWTs, mapping directly to Supabase authenticated users via custom NextAuth sessions.
-3. **Data Privacy**: No email contents are stored on intermediate systems. Summaries and embeddings are computed directly using Gemini/NVIDIA API endpoints.
+1. **Token Isolation**: Users' OAuth credentials (access/refresh tokens) are securely cached in the database. Access tokens are used locally and are automatically refreshed using authorization flow.
+2. **Access Control**: Database connection routes employ Supabase authenticated JWT cookies, securing operations on a per-user basis.
+3. **Data Protection**: Zero mail content is stored on intermediate models or hosts. AI operations (summaries, categorization, RAG) are handled using private, encrypted API endpoints via official Gemini and NVIDIA NIM integration libraries.
