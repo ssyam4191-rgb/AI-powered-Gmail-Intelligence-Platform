@@ -15,7 +15,9 @@ Powered by **Next.js 16**, **Supabase (pgvector)**, **Google Gemini 2.5 Flash**,
 > 4. **Dual AI Engines with Auto Backup**: The app uses two AI models: **Google Gemini 2.5 Flash** (Primary Engine) and **NVIDIA NIM Llama 3.1 8B** (Secondary Engine). If a Gemini request fails (due to rate limits, API quotas, or network issues), the app automatically switches to the NVIDIA model to get the response.
 
 ---
+## Demo Video
 
+[![Watch the Demo](https://img.shields.io/badge/Watch-Demo-blue)](https://github.com/username/repository/blob/main/demo.mp4)
 
 
 ## 🚀 Key Features
@@ -94,6 +96,30 @@ Gmail Intelligence Platform/
    ```bash
    cp ../../.env.example .env.local
    ```
+   **Create Frontend/gmail-intelligence/.env.local and add:**
+```bash
+ ----- Google OAuth -----
+GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret_here
+
+ ----- NextAuth.js -----
+NEXTAUTH_SECRET=your_nextauth_secret_here
+AUTH_SECRET=your_auth_secret_here_for_nextauth_v5
+NEXTAUTH_URL=http://localhost:3000
+
+ ----- Supabase -----
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+ ----- Google Gemini -----
+GEMINI_API_KEY=your_gemini_api_key_here
+
+ ----- NVIDIA NIM -----
+NVIDIA_NIM_API_KEY=your_nvidia_nim_api_key_here
+NVIDIA_NIM_BASE_URL=https://integrate.api.nvidia.com/v1
+NVIDIA_NIM_MODEL=meta/llama-3.1-8b-instruct
+```
 
 4. **Initialize the Database**:
    Log in to your Supabase Dashboard, open the **SQL Editor**, and paste the contents of `Backend/schema.sql` to construct the tables, indexes, RLS policies, and similarity search functions.
