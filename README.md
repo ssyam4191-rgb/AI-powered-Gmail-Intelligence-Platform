@@ -16,7 +16,7 @@ Powered by **Next.js 16**, **Supabase (pgvector)**, **Google Gemini 2.5 Flash**,
 ## 🎥 Demo Video
 
 [![Demo Video](https://img.youtube.com/vi/N1FWMcACCCU/maxresdefault.jpg)](https://www.youtube.com/watch?v=N1FWMcACCCU)
----
+
 
 ## 🚀 Key Features
 
